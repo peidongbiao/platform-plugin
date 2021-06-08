@@ -1,0 +1,6 @@
+include ':compiler-dsbridge'
+include ':platform-plugin-dsbridge'
+include ':annotation'
+include ':library'
+include ':app'
+rootProject.name = "platformplugin"
