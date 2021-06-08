@@ -1,13 +1,16 @@
 plugins {
     id 'com.android.library'
+    id 'com.github.dcendents.android-maven'
 }
+
+group = rootProject.ext.group
 
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
 
     defaultConfig {
-        minSdkVersion 22
+        minSdkVersion 21
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
@@ -36,4 +39,5 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
     api project(path: ':annotation')
+    //api "com.github.peidongbiao.platform-plugin:annotation:master-SNAPSHOT"
 }

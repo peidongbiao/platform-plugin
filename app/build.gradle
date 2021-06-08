@@ -29,7 +29,8 @@ android {
 }
 
 dependencies {
-
+    implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+    implementation project(path: ':adapter-flutter')
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
@@ -37,6 +38,11 @@ dependencies {
     implementation 'com.google.android.material:material:1.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation project(path: ':library')
-    implementation project(path: ':platform-plugin-dsbridge')
+    implementation project(path: ':adapter-dsbridge')
+    implementation project(path: ':adapter-flutter')
+    implementation project(path: ':adapter-react-native')
     annotationProcessor project(':compiler-dsbridge')
+    annotationProcessor project(':compiler-flutter')
+    annotationProcessor project(':compiler-react-native')
+    implementation "io.flutter:flutter_embedding_release:1.0.0-ee76268252c22f5c11e82a7b87423ca3982e51a7"
 }

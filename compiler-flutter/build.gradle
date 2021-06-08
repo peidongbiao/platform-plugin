@@ -1,0 +1,17 @@
+plugins {
+    id 'java-library'
+    id 'com.github.dcendents.android-maven'
+}
+group = rootProject.ext.group
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_7
+    targetCompatibility = JavaVersion.VERSION_1_7
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.squareup:javapoet:1.13.0'
+    implementation 'com.google.auto.service:auto-service:1.0-rc2'
+    implementation project(':annotation')
+}

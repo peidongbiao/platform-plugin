@@ -18,7 +18,7 @@ public class PluginManager {
 
 
     public PluginManager(Context context, PlatformPluginContext.PlatformPluginHost host) {
-        mPluginContext = new PlatformPluginContext(context, host);
+        mPluginContext = new PlatformPluginContext(context, this, host);
     }
 
     public void addPlugin(PlatformPlugin plugin) {
@@ -26,7 +26,6 @@ public class PluginManager {
             Log.w(TAG, "addPlugin, " + plugin.getClass().getName() + " already added!");
             return;
         }
-        plugin.setPluginContext(mPluginContext);
         mPluginMap.put(plugin.getClass(), plugin);
     }
 
@@ -36,10 +35,15 @@ public class PluginManager {
     }
 
 
-    @SuppressWarnings("unchecked")
     @Nullable
-    public <T> T getPlugin(Class<? extends PlatformPlugin> pluginClass) {
-        return (T) mPluginMap.get(pluginClass);
+    public <T extends PlatformPlugin> T getPlugin(Class<? extends PlatformPlugin> pluginClass) {
+        @SuppressWarnings("unchecked")
+        T plugin =  (T) mPluginMap.get(pluginClass);
+        return plugin;
+    }
+
+    public PlatformPluginContext getPluginContext() {
+        return mPluginContext;
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -48,11 +52,5 @@ public class PluginManager {
 
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         mPluginContext.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    public void onNewIntent(Intent intent) {
-        for (Map.Entry<Class<? extends PlatformPlugin>, PlatformPlugin> entry : mPluginMap.entrySet()) {
-            entry.getValue().onNewIntent(intent);
-        }
     }
 }

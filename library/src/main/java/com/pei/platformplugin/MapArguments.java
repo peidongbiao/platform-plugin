@@ -2,17 +2,26 @@ package com.pei.platformplugin;
 
 import java.util.Map;
 
-public class MapArguments implements Arguments {
+public class MapArguments implements PluginArguments {
 
-    private Map mMap;
+    private final Map<?,?> mMap;
 
-    public MapArguments(Map map) {
+    public MapArguments(Map<?,?> map) {
         mMap = map;
     }
 
     @Override
     public <T> T get(String key) {
-        return (T) mMap.get(key);
+        @SuppressWarnings("unchecked")
+        T value = (T) mMap.get(key);
+        return value;
+    }
+
+    @Override
+    public <T> T get(String key, T defaultValue) {
+        T value = get(key);
+        if (value == null) return defaultValue;
+        return value;
     }
 
     @Override

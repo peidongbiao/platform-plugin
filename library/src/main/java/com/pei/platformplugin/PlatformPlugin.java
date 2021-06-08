@@ -9,6 +9,9 @@ public class PlatformPlugin {
 
     private PlatformPluginContext mPluginContext;
 
+    public PlatformPlugin(PlatformPluginContext pluginContext) {
+        mPluginContext = pluginContext;
+    }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
@@ -18,19 +21,11 @@ public class PlatformPlugin {
 
     }
 
-    protected void onNewIntent(Intent intent) {
-
-    }
-
     public PlatformPluginContext getPluginContext() {
         return mPluginContext;
     }
 
-    public void setPluginContext(PlatformPluginContext pluginContext) {
-        mPluginContext = pluginContext;
-    }
-
     public Context getContext() {
-        return mPluginContext.getContext();
+        return mPluginContext.getApplicationContext();
     }
 }

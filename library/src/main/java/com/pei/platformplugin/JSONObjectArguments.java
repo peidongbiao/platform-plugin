@@ -1,9 +1,8 @@
 package com.pei.platformplugin;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-public class JSONObjectArguments implements Arguments {
+public class JSONObjectArguments implements PluginArguments {
 
     JSONObject mJSONObject;
 
@@ -13,13 +12,16 @@ public class JSONObjectArguments implements Arguments {
 
     @Override
     public <T> T get(String key) {
-        try {
-            Object value =  mJSONObject.get(key);
-            return (T) value;
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return null;
+        @SuppressWarnings("unchecked")
+        T value = (T) mJSONObject.opt(key);
+        return value;
+    }
+
+    @Override
+    public <T> T get(String key, T defaultValue) {
+        T value = get(key);
+        if (value == null) return defaultValue;
+        return value;
     }
 
     @Override

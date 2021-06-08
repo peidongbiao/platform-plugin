@@ -7,6 +7,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
@@ -29,6 +30,8 @@ import javax.lang.model.util.ElementFilter;
 
 @AutoService(Plugin.class)
 public class DsBridgeAnnotationProcessor extends AbstractProcessor {
+    private static final String NAME_SUFFIX = "Interface";
+    private static final String PACKAGE_NAME = "com.pei.platformplugin.dsbridge";
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -51,20 +54,17 @@ public class DsBridgeAnnotationProcessor extends AbstractProcessor {
         for (Element element : roundEnv.getElementsAnnotatedWith(Plugin.class)) {
             if (element.getKind() == ElementKind.CLASS) {
                 TypeElement typeElement = (TypeElement) element;
-                System.out.println("qualified name: " + typeElement.getQualifiedName());
-                System.out.println("class name: " + typeElement.getSimpleName());
-                System.out.println("super class: " + typeElement.getSuperclass());
-                System.out.println("interfaces: " + typeElement.getInterfaces());
+                System.out.println("qualified name: " + typeElement.getQualifiedName() + ", class name: " + typeElement.getSimpleName());
                 Plugin annotation = typeElement.getAnnotation(Plugin.class);
 
                 String name = annotation.name();
                 if (name.length() == 0) {
                     //name = typeElement.getSimpleName().subSequence()
                 }
-                name += "Interface";
+                name += NAME_SUFFIX;
 
                 TypeSpec typeSpec = generateJavascriptInterface(typeElement, name);
-                JavaFile file = JavaFile.builder("com.pei.platformplugin.dsbridge", typeSpec).build();
+                JavaFile file = JavaFile.builder(PACKAGE_NAME, typeSpec).build();
                 try {
                     file.writeTo(processingEnv.getFiler());
                 } catch (IOException e) {
@@ -79,17 +79,18 @@ public class DsBridgeAnnotationProcessor extends AbstractProcessor {
     private TypeSpec generateJavascriptInterface(TypeElement pluginElement, String name) {
         String fieldName = "mPlugin";
         TypeName platformPluginType = ClassName.get(pluginElement);
-
-        ClassName completionHandlerType = ClassName.get("wendu.dsbridge", "CompletionHandler");
+        ClassName JSONObjectType = ClassName.get("org.json", "JSONObject");
+        TypeName completionHandlerType = ParameterizedTypeName.get(ClassName.get("wendu.dsbridge", "CompletionHandler"), JSONObjectType);
         ClassName javascriptInterfaceType = ClassName.get("android.webkit", "JavascriptInterface");
         ClassName jsonObjectArgumentType = ClassName.get("com.pei.platformplugin", "JSONObjectArguments");
         ClassName callbackAdapterType = ClassName.get("com.pei.platformplugin.dsbridge", "CompletionHandlerCallbackAdapter");
         ClassName jsonObjectType = ClassName.get("org.json", "JSONObject");
 
-        FieldSpec pluginField = FieldSpec.builder(platformPluginType, "mPlugin", Modifier.PRIVATE)
+        FieldSpec pluginField = FieldSpec.builder(platformPluginType, "mPlugin", Modifier.PROTECTED)
                 .build();
 
         MethodSpec constructor = MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC)
                 .addParameter(platformPluginType, "plugin")
                 .addStatement("this.$L = $L", fieldName, "plugin")
                 .build();
@@ -106,7 +107,7 @@ public class DsBridgeAnnotationProcessor extends AbstractProcessor {
                         .addParameter(Object.class, "params")
                         .addParameter(completionHandlerType, "handler")
                         .addStatement("$T args = ($T) params", jsonObjectType, jsonObjectType)
-                        .addStatement("mPlugin.$L(new $T(args), new $T<>(handler))", method.getSimpleName(), jsonObjectArgumentType, callbackAdapterType);
+                        .addStatement("mPlugin.$L(new $T(args), new $T(handler))", method.getSimpleName(), jsonObjectArgumentType, callbackAdapterType);
                 methods.add(methodSpecBuilder.build());
             }
         }

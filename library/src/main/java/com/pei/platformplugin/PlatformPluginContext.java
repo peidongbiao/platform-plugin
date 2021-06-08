@@ -1,6 +1,5 @@
 package com.pei.platformplugin;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -8,15 +7,19 @@ import android.util.Pair;
 import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
 
 /**
  * Created by peidongbiao on 2018/8/17.
  */
 public class PlatformPluginContext {
 
+    private PluginManager mPluginManager;
     private Context mContext;
     private PlatformPluginHost mPluginHost;
     private PlatformPlugin mStartActivityCallback;
@@ -25,8 +28,9 @@ public class PlatformPluginContext {
     private int mMappedRequestCode;
 
 
-    public PlatformPluginContext(Context context, PlatformPluginHost mPluginHost) {
-        this.mContext = context;
+    public PlatformPluginContext(Context context, PluginManager pluginManager, PlatformPluginHost mPluginHost) {
+        this.mContext = context.getApplicationContext();
+        this.mPluginManager = pluginManager;
         this.mPluginHost = mPluginHost;
         mPermissionCallback = new SparseArray<>();
     }
@@ -66,10 +70,24 @@ public class PlatformPluginContext {
         }
     }
 
-    public Context getContext() {
+    public Context getApplicationContext() {
         return mContext;
     }
 
+    public boolean hashPlugin(Class<? extends PlatformPlugin> pluginClass) {
+        return mPluginManager.hashPlugin(pluginClass);
+    }
+
+    @Nullable
+    public <T extends PlatformPlugin> T getPlugin(Class<? extends PlatformPlugin> pluginClass) {
+        @SuppressWarnings("unchecked")
+        T plugin =  (T) mPluginManager.getPlugin(pluginClass);
+        return plugin;
+    }
+
+    public Lifecycle getLifeCycle() {
+        return mPluginHost.getLifeCycle();
+    }
 
     interface PlatformPluginHost {
 
@@ -80,13 +98,15 @@ public class PlatformPluginContext {
         boolean checkSelfPermission(String permission);
 
         void requestPermissions(String[] permissions, int requestCode);
+
+        Lifecycle getLifeCycle();
     }
 
-    public static class FragmentPlatformPluginHost implements PlatformPluginHost {
+    public static class FragmentPluginHost implements PlatformPluginHost {
 
         private Fragment mFragment;
 
-        public FragmentPlatformPluginHost(Fragment fragment) {
+        public FragmentPluginHost(Fragment fragment) {
             mFragment = fragment;
         }
 
@@ -109,14 +129,19 @@ public class PlatformPluginContext {
         public void requestPermissions(String[] permissions, int requestCode) {
             mFragment.requestPermissions(permissions, requestCode);
         }
+
+        @Override
+        public Lifecycle getLifeCycle() {
+            return mFragment.getLifecycle();
+        }
     }
 
 
-    public static class ActivityPlatformPluginHost implements PlatformPluginHost {
+    public static class ActivityPluginHost implements PlatformPluginHost {
 
-        Activity mActivity;
+        FragmentActivity mActivity;
 
-        public ActivityPlatformPluginHost(Activity activity) {
+        public ActivityPluginHost(FragmentActivity activity) {
             mActivity = activity;
         }
 
@@ -138,6 +163,11 @@ public class PlatformPluginContext {
         @Override
         public void requestPermissions(String[] permissions, int requestCode) {
             ActivityCompat.requestPermissions(mActivity, permissions, requestCode);
+        }
+
+        @Override
+        public Lifecycle getLifeCycle() {
+            return mActivity.getLifecycle();
         }
     }
 }
