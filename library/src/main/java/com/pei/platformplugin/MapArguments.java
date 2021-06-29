@@ -1,5 +1,6 @@
 package com.pei.platformplugin;
 
+import java.util.List;
 import java.util.Map;
 
 public class MapArguments implements PluginArguments {
@@ -22,6 +23,20 @@ public class MapArguments implements PluginArguments {
         T value = get(key);
         if (value == null) return defaultValue;
         return value;
+    }
+
+    @Override
+    public Map<String, Object> getMap(String key) {
+        @SuppressWarnings("unchecked")
+        Map<String,Object> map = (Map<String, Object>) mMap.get(key);
+        return map;
+    }
+
+    @Override
+    public List<Object> getList(String key) {
+        @SuppressWarnings("unchecked")
+        List<Object> list = (List<Object>) mMap.get(key);
+        return list;
     }
 
     @Override

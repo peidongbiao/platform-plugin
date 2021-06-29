@@ -9,15 +9,9 @@ public @interface Extra {
 
     boolean booleanValue() default false;
 
-    byte byteValue() default 0;
-
-    short shortValue() default 0;
-
     int intValue() default 0;
 
     long longValue() default 0;
-
-    float floatValue() default 0;
 
     double doubleValue() default 0;
 

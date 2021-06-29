@@ -20,18 +20,25 @@ import androidx.lifecycle.Lifecycle;
 public class PlatformPluginContext {
 
     private PluginManager mPluginManager;
+
     private Context mContext;
+
     private PlatformPluginHost mPluginHost;
-    private PlatformPlugin mStartActivityCallback;
-    private int mStartActivityRequestCode;
+
+    private SparseArray<Pair<PlatformPlugin, Integer>> mStartActivityCallback;
+
+    private int mStartActivityRequestCode = 10000;
+
     private SparseArray<Pair<PlatformPlugin, Integer>> mPermissionCallback;
-    private int mMappedRequestCode;
+
+    private int mPermissionRequestCode = 20000;
 
 
     public PlatformPluginContext(Context context, PluginManager pluginManager, PlatformPluginHost mPluginHost) {
         this.mContext = context.getApplicationContext();
         this.mPluginManager = pluginManager;
         this.mPluginHost = mPluginHost;
+        mStartActivityCallback = new SparseArray<>();
         mPermissionCallback = new SparseArray<>();
     }
 
@@ -39,16 +46,17 @@ public class PlatformPluginContext {
         mPluginHost.startActivity(intent);
     }
 
-    public void startActivityForResult(PlatformPlugin handler, Intent intent, int requestCode) {
-        mPluginHost.startActivityForResult(intent, requestCode);
-        mStartActivityCallback = handler;
-        mStartActivityRequestCode = requestCode;
+    public void startActivityForResult(PlatformPlugin plugin, Intent intent, int requestCode) {
+        int code = mStartActivityRequestCode++;
+        mStartActivityCallback.put(code, Pair.create(plugin, requestCode));
+        mPluginHost.startActivityForResult(intent, code);
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (mStartActivityCallback != null && mStartActivityRequestCode == requestCode) {
-            mStartActivityCallback.onActivityResult(requestCode, resultCode, data);
-            mStartActivityCallback = null;
+        Pair<PlatformPlugin, Integer> pair = mStartActivityCallback.get(requestCode);
+        if (pair != null) {
+            mStartActivityCallback.delete(requestCode);
+            pair.first.onActivityResult(pair.second, resultCode, data);
         }
     }
 
@@ -57,7 +65,7 @@ public class PlatformPluginContext {
     }
 
     public void requestPermissions(PlatformPlugin plugin, String[] permissions, int requestCode) {
-        int code = mMappedRequestCode++;
+        int code = mPermissionRequestCode++;
         mPermissionCallback.put(code, Pair.create(plugin, requestCode));
         mPluginHost.requestPermissions(permissions, code);
     }

@@ -2,6 +2,7 @@ package com.pei.platformplugin.processor.reactnative;
 
 import com.google.auto.service.AutoService;
 import com.pei.plaformplugin.annotation.Extra;
+import com.pei.plaformplugin.annotation.ExtraFinder;
 import com.pei.plaformplugin.annotation.Plugin;
 import com.pei.plaformplugin.annotation.PluginMethod;
 import com.squareup.javapoet.ClassName;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -80,18 +82,20 @@ public class ReactNativeAnnotationProcessor extends AbstractProcessor {
         ClassName platformPluginType = ClassName.get(pluginElement);
         ClassName reactContextBaseJavaModuleType = ClassName.get("com.facebook.react.bridge", "ReactContextBaseJavaModule");
         ClassName reactApplicationContextType = ClassName.get("com.facebook.react.bridge", "ReactApplicationContext");
-
         ClassName readableMapType = ClassName.get("com.facebook.react.bridge", "ReadableMap");
         ClassName callbackType = ClassName.get("com.facebook.react.bridge", "Callback");
         ClassName promiseType = ClassName.get("com.facebook.react.bridge", "Promise");
-
         ClassName nonNullType = ClassName.get("androidx.annotation", "NonNull");
         ClassName reactMethodType = ClassName.get("com.facebook.react.bridge", "ReactMethod");
-
         ClassName callbackAdapterType = ClassName.get("com.pei.platformplugin.reactnative", "ReactNativeCallbackAdapter");
         ClassName promiseAdapterType = ClassName.get("com.pei.platformplugin.reactnative", "ReactNativePromiseAdapter");
-
         ClassName mapArgumentsType = ClassName.get("com.pei.platformplugin", "MapArguments");
+
+        Plugin plugin = pluginElement.getAnnotation(Plugin.class);
+        String moduleName = ExtraFinder.findString(plugin.extras(), "ReactNativeModuleName", null);
+        if (moduleName == null || moduleName.length() == 0) {
+            moduleName = name;
+        }
 
         String fieldName = "mPlugin";
         FieldSpec pluginField = FieldSpec.builder(platformPluginType, fieldName, Modifier.PROTECTED)
@@ -111,7 +115,7 @@ public class ReactNativeAnnotationProcessor extends AbstractProcessor {
                 .returns(String.class)
                 .addAnnotation(nonNullType)
                 .addAnnotation(Override.class)
-                .addStatement("return $S", name)
+                .addStatement("return $S", moduleName)
                 .build();
 
         List<MethodSpec> methods = new ArrayList<>();
@@ -125,7 +129,8 @@ public class ReactNativeAnnotationProcessor extends AbstractProcessor {
                         .addAnnotation(reactMethodType)
                         .returns(void.class)
                         .addParameter(ParameterSpec.builder(readableMapType, "params").build());
-                if (isPromiseMethod(pluginMethodAnnotation.value(), "promise")) {
+                boolean isPromise = ExtraFinder.findBoolean(pluginMethodAnnotation.value(), "promise", false);
+                if (isPromise) {
                     methodSpecBuilder.addParameter(promiseType, "promise")
                     .addStatement("mPlugin.$L(new $T(params.toHashMap()), new $T(promise))", method.getSimpleName(), mapArgumentsType, promiseAdapterType);
                 } else {
@@ -137,7 +142,7 @@ public class ReactNativeAnnotationProcessor extends AbstractProcessor {
             }
         }
 
-        TypeSpec.Builder typeSpecBuilder = TypeSpec.classBuilder(name)
+        TypeSpec.Builder typeSpecBuilder = TypeSpec.classBuilder(moduleName)
                 .addModifiers(Modifier.PUBLIC)
                 .superclass(reactContextBaseJavaModuleType)
                 .addField(pluginField)
@@ -146,12 +151,5 @@ public class ReactNativeAnnotationProcessor extends AbstractProcessor {
                 .addMethods(methods);
 
         return typeSpecBuilder.build();
-    }
-
-    private boolean isPromiseMethod(Extra[] extras, String key) {
-        for (Extra extra : extras) {
-            if (extra.key().equals(key)) return extra.booleanValue();
-        }
-        return false;
     }
 }

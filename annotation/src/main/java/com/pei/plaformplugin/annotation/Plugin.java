@@ -10,4 +10,5 @@ import java.lang.annotation.Target;
 public @interface Plugin {
 
     String name() default "";
+    Extra[] extras() default {};
 }

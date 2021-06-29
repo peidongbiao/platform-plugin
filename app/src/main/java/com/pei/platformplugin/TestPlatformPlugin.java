@@ -20,9 +20,13 @@ import com.pei.plaformplugin.annotation.Plugin;
 import com.pei.plaformplugin.annotation.PluginMethod;
 
 import java.io.File;
+import java.util.Map;
 import java.util.UUID;
 
-@Plugin(name = "TestPlatform")
+@Plugin(
+        name = "TestPlatform",
+        extras = {@Extra(key = "ReactNativeModuleName", stringValue = "RNTestPlatformModule")}
+)
 public class TestPlatformPlugin extends PlatformPlugin {
     private static final String TAG = "TestPlatformPlugin";
 
@@ -59,8 +63,9 @@ public class TestPlatformPlugin extends PlatformPlugin {
     public void chooseFile(PluginArguments arguments, PluginCallback callback) {
         mChooseFileCallback = callback;
         mType = arguments.get("type");
+        Map<String,Object> test = arguments.getMap("test");
         if (getPluginContext().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            doChooseFile(mType);
+            chooseFile(mType);
         } else {
             getPluginContext().requestPermissions(this, new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, PERMISSION_STORAGE);
         }
@@ -78,12 +83,12 @@ public class TestPlatformPlugin extends PlatformPlugin {
         this.mCaptureCallback = callback;
     }
 
-    @PluginMethod({@Extra(key = "promise", booleanValue = true)})
+    @PluginMethod(@Extra(key = "promise", booleanValue = true))
     public void test(PluginArguments arguments, PluginCallback callback) {
 
     }
 
-    private void doChooseFile(String type) {
+    private void chooseFile(String type) {
         if (TextUtils.isEmpty(type)) {
             type = "*/*";
         }
@@ -96,17 +101,28 @@ public class TestPlatformPlugin extends PlatformPlugin {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_SELECT && resultCode == Activity.RESULT_OK) {
-            Uri uri = data.getData();
-            String filePath = FileUtils.getPathFromUri(getContext(), uri);
-            //String filePath = "";
-            if (mChooseFileCallback != null) {
-                mChooseFileCallback.onResult(PluginResult.success(filePath));
-                mChooseFileCallback = null;
+        if (requestCode == REQUEST_SELECT) {
+            if (resultCode == Activity.RESULT_OK) {
+                Uri uri = data.getData();
+                String filePath = FileUtils.getPathFromUri(getContext(), uri);
+                if (mChooseFileCallback != null) {
+                    mChooseFileCallback.onResult(PluginResult.success(filePath));
+                }
+            } else {
+                if (mChooseFileCallback != null) {
+                    mChooseFileCallback.onResult(PluginResult.failure("1", "Canceled"));
+                }
             }
-        } else if (requestCode == REQUEST_CAMERA && resultCode == Activity.RESULT_OK) {
-            if (mCaptureCallback != null) {
-                mCaptureCallback.onResult(PluginResult.success(mCaptureFile.getPath()));
+            mChooseFileCallback = null;
+        } else if (requestCode == REQUEST_CAMERA) {
+            if (resultCode == Activity.RESULT_OK) {
+                if (mCaptureCallback != null) {
+                    mCaptureCallback.onResult(PluginResult.success(mCaptureFile.getPath()));
+                }
+            } else {
+                if (mCaptureCallback != null) {
+                    mCaptureCallback.onResult(PluginResult.failure("1", "Canceled"));
+                }
             }
         }
     }
@@ -116,7 +132,7 @@ public class TestPlatformPlugin extends PlatformPlugin {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_STORAGE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                doChooseFile(mType);
+                chooseFile(mType);
             }
         }
     }

@@ -13,13 +13,19 @@
                 "message": message || "message from js"
             };
             dsBridge.call("test.showToast", params, function (value) {
-                console.log(JSON.stringify(value));
+                //console.log(JSON.stringify(value));
             });
         }
 
         function chooseFile() {
             var params = {
-                "type": "image/*"
+                "type": "image/*",
+                "test": {
+                    "key1" : {
+                        "list": [1,2,3,4,"6",false]
+                    },
+                    "key2" : "v2",
+                }
             };
 
             dsBridge.call("test.chooseFile", params, function (value) {

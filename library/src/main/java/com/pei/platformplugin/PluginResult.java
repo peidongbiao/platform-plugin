@@ -29,9 +29,14 @@ public class PluginResult {
     public static final String ERROR_NONE = "0";
 
     private final Object data;
+
     private final boolean success;
+
     private final String errorCode;
+
     private final String errorMsg;
+
+    @DataType
     private final String dataType;
 
     public static PluginResult success() {

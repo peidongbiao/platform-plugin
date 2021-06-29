@@ -31,7 +31,8 @@ import javax.lang.model.util.ElementFilter;
 @AutoService(Plugin.class)
 public class FlutterAnnotationProcessor extends AbstractProcessor {
 
-    private static final String NAME_SUFFIX = "Handler";
+    private static final String PLUGIN_NAME_SUFFIX = "FlutterPlugin";
+    private static final String HANDLER_NAME_SUFFIX = "Handler";
     private static final String PACKAGE_NAME = "com.pei.platformplugin.flutter";
 
     @Override
@@ -58,20 +59,26 @@ public class FlutterAnnotationProcessor extends AbstractProcessor {
                 Plugin annotation = typeElement.getAnnotation(Plugin.class);
 
                 String name = annotation.name();
-                if (name.length() == 0) {
-                    //name = typeElement.getSimpleName().subSequence()
-                }
-                name += NAME_SUFFIX;
 
-                TypeSpec typeSpec = generateMethodCallHandler(typeElement, name);
-                JavaFile file = JavaFile.builder(PACKAGE_NAME, typeSpec).build();
-                try {
-                    file.writeTo(processingEnv.getFiler());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                TypeSpec methodCallHandlerTypeSpec = generateMethodCallHandler(typeElement, name + HANDLER_NAME_SUFFIX);
+                writeToFile(methodCallHandlerTypeSpec);
+
+                TypeSpec pluginTypeSpec = generateFlutterPlugin(typeElement, name + PLUGIN_NAME_SUFFIX, methodCallHandlerTypeSpec);
+                writeToFile(pluginTypeSpec);
+
                 return false;
             }
+        }
+        return false;
+    }
+
+    private boolean writeToFile(TypeSpec typeSpec) {
+        JavaFile file = JavaFile.builder(PACKAGE_NAME, typeSpec).build();
+        try {
+            file.writeTo(processingEnv.getFiler());
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return false;
     }
@@ -146,6 +153,61 @@ public class FlutterAnnotationProcessor extends AbstractProcessor {
                 .addMethod(constructor)
                 .addMethod(onMethodCallMethodBuilder.build())
                 .addMethods(methods);
+
+        return typeSpecBuilder.build();
+    }
+
+    private TypeSpec generateFlutterPlugin(TypeElement pluginElement, String name, TypeSpec methodCallHandlerType) {
+
+        ClassName flutterPluginType = ClassName.get("io.flutter.embedding.engine.plugins", "FlutterPlugin");
+        ClassName platformPluginType = ClassName.get(pluginElement);
+        ClassName methodChannelType = ClassName.get("io.flutter.plugin.common", "MethodChannel");
+        ClassName flutterPluginBinding = ClassName.get("io.flutter.embedding.engine.plugins", "FlutterPlugin", "FlutterPluginBinding");
+        ClassName nonNullType = ClassName.get("androidx.annotation", "NonNull");
+        ClassName overrideType = ClassName.get("java.lang", "Override");
+
+        String pluginFieldName = "mPlugin";
+        String channelFieldName = "mMethodChannel";
+        String channelNameFieldName = "mMethodChannelName";
+
+        FieldSpec pluginField = FieldSpec.builder(platformPluginType, pluginFieldName, Modifier.PROTECTED).build();
+        FieldSpec channelField = FieldSpec.builder(methodChannelType, channelFieldName, Modifier.PROTECTED).build();
+        FieldSpec channelNameField = FieldSpec.builder(String.class, channelNameFieldName, Modifier.PROTECTED).build();
+
+        MethodSpec constructor = MethodSpec.constructorBuilder()
+                .addParameter(String.class, "methodChannelName")
+                .addParameter(platformPluginType, "plugin")
+                .addStatement("this.$L = plugin", pluginFieldName)
+                .addStatement("this.$L = methodChannelName", channelNameFieldName)
+                .build();
+
+        MethodSpec onAttachedToEngine = MethodSpec.methodBuilder("onAttachedToEngine")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(overrideType)
+                .returns(void.class)
+                .addParameter(ParameterSpec.builder(flutterPluginBinding, "binding").addAnnotation(nonNullType).build())
+                .addStatement("$L = new $T(binding.getBinaryMessenger(), $L)", channelFieldName, methodChannelType, channelNameFieldName)
+                .addStatement("$L.setMethodCallHandler(new $N($L))", channelFieldName, methodCallHandlerType, pluginFieldName)
+                .build();
+
+        MethodSpec onDetachedFromEngine = MethodSpec.methodBuilder("onDetachedFromEngine")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(overrideType)
+                .returns(void.class)
+                .addParameter(ParameterSpec.builder(flutterPluginBinding, "binding").addAnnotation(nonNullType).build())
+                .addStatement("$L.setMethodCallHandler(null)", channelFieldName)
+                .addStatement("$L = null", channelFieldName)
+                .build();
+
+        TypeSpec.Builder typeSpecBuilder = TypeSpec.classBuilder(name)
+                .addModifiers(Modifier.PUBLIC)
+                .addSuperinterface(flutterPluginType)
+                .addField(pluginField)
+                .addField(channelField)
+                .addField(channelNameField)
+                .addMethod(constructor)
+                .addMethod(onAttachedToEngine)
+                .addMethod(onDetachedFromEngine);
 
         return typeSpecBuilder.build();
     }
